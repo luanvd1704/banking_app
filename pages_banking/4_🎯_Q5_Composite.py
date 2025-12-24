@@ -1,0 +1,320 @@
+"""
+Q5: Trang Điểm Tổng Hợp
+"""
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from data.loader import merge_all_data
+from analysis.composite import build_composite_score, quintile_backtest, capm_analysis
+from config.config import get_sector_config, CACHE_TTL, QUINTILE_COLORS
+from utils.constants import *
+from utils.logo_helper import display_sidebar_logo
+
+# Filtered bank tickers based on comprehensive quintile analysis across 6 timeframes
+# Only banks with statistical significance (p-value <= 0.05, positive spread)
+# Analysis: Tested T+1, T+3, T+5, T+10, T+20, T+30 horizons
+# Note: Zero values INCLUDED in quintile analysis (not filtered)
+# Updated: 2025-12-22 after fixing inf/-inf bug and re-analyzing with current data
+FILTERED_BANKING_TICKERS = [
+    'ACB',  # Significant at T+5 (p=0.045, spread=0.010)
+    'OCB',  # Significant at T+30 (p=0.005, spread=0.023)
+    'VPB',  # Significant at T+20 (p=0.003) and T+30 (p=0.004)
+]
+
+# Get banking config
+config_banking = get_sector_config('banking')
+
+st.set_page_config(page_title="Q5: Điểm Tổng Hợp", page_icon="🎯", layout="wide")
+
+# Display logo in sidebar
+display_sidebar_logo()
+
+st.title("🎯 Q5: Chiến Lược Điểm Tổng Hợp")
+
+st.info("""
+📊 **Lưu ý**: Tab này chỉ hiển thị 3 mã ngân hàng có dữ liệu khối ngoại có sức dự đoán có ý nghĩa thống kê.
+
+**Tiêu chí lọc:**
+- Quintile analysis trên 6 khung thời gian (T+1 đến T+30)
+- P-value ≤ 0.05 (độ tin cậy ≥ 95%)
+- Spread dương (Q5 > Q1)
+
+**3 mã đạt chuẩn:**
+- **VPB**: Mạnh nhất - 2/6 horizons có ý nghĩa (T+20, T+30)
+- **OCB**: 1/6 horizon có ý nghĩa (T+30)
+- **ACB**: 1/6 horizon có ý nghĩa (T+5)
+
+**Dữ liệu tự doanh**: Đã loại bỏ khỏi công thức (0/17 mã có ý nghĩa thống kê)
+
+*Cập nhật: 22/12/2025 - Đã fix lỗi inf/-inf và phân tích lại với dữ liệu hiện tại*
+""")
+
+st.markdown("""
+**Câu Hỏi Nghiên Cứu**: Chúng ta có thể kết hợp các tín hiệu để tạo alpha không?
+
+**Công Thức Điểm Tổng Hợp** (đã tối ưu):
+```
+Điểm = z(Mua Ròng NN) - phân_vị(PE/PB)
+```
+
+Trong đó:
+- **z(NN)**: Z-score của mua ròng nước ngoài (cửa sổ 252 ngày)
+- **phân_vị(PE/PB)**: Phân vị trung bình của PE và PB (cửa sổ 3 năm, đảo ngược)
+
+**Chiến Lược**: Long Q5 (điểm cao nhất), Short Q1 (điểm thấp nhất)
+
+**Lợi ích**: Backtest 5 năm (thay vì 3 năm khi có tự doanh)
+""")
+
+# Load data
+@st.cache_data(ttl=CACHE_TTL)
+def load_all_data():
+    return merge_all_data(config_banking, tickers=FILTERED_BANKING_TICKERS)
+
+# Sidebar
+st.sidebar.header("Cài Đặt")
+
+selected_tickers = st.sidebar.multiselect(
+    "Chọn Mã Cổ Phiếu",
+    FILTERED_BANKING_TICKERS,
+    default=FILTERED_BANKING_TICKERS
+)
+
+holding_period = st.sidebar.slider(
+    "Kỳ Hạn Nắm Giữ (ngày)",
+    1, 30, 5
+)
+
+# Load and prepare data
+with st.spinner("Đang xây dựng điểm tổng hợp..."):
+    data = load_all_data()
+
+    scores_data = {}
+    for ticker in selected_tickers:
+        df = data[ticker].copy()
+        # Use foreign trading + valuation only (no self-trading)
+        df = build_composite_score(df, use_self_trading=False)
+        scores_data[ticker] = df
+
+# Current rankings
+st.header("Xếp Hạng Hiện Tại")
+
+st.markdown("Điểm tổng hợp mới nhất cho tất cả các mã đã chọn")
+
+current_rankings = []
+for ticker, df in scores_data.items():
+    if COMPOSITE_SCORE in df.columns:
+        latest = df.iloc[-1]
+        current_rankings.append({
+            'Mã': ticker,
+            'Điểm Tổng Hợp': latest.get(COMPOSITE_SCORE, np.nan),
+            'Ngày': str(latest.get(DATE, ''))[:10] if DATE in latest.index else 'N/A',
+            'Z NN': latest.get(FOREIGN_ZSCORE, np.nan),
+            'PE %ile': latest.get(PE_PERCENTILE, np.nan),
+            'PB %ile': latest.get(PB_PERCENTILE, np.nan)
+        })
+
+if current_rankings:
+    rank_df = pd.DataFrame(current_rankings).sort_values('Điểm Tổng Hợp', ascending=False)
+
+    # Color code
+    def color_score(val):
+        if pd.isna(val):
+            return ''
+        return 'background-color: lightgreen' if val > 0 else 'background-color: lightcoral'
+
+    st.dataframe(
+        rank_df.style.format({
+            'Điểm Tổng Hợp': '{:.2f}',
+            'Z NN': '{:.2f}',
+            'PE %ile': '{:.1f}',
+            'PB %ile': '{:.1f}'
+        }).applymap(color_score, subset=['Điểm Tổng Hợp']),
+        use_container_width=True
+    )
+
+# Backtest for each ticker
+st.header("Kết Quả Backtest Theo Nhóm")
+
+for ticker in selected_tickers:
+    with st.expander(f"📊 {ticker} - Kết Quả Backtest"):
+        df = scores_data[ticker]
+
+        # Run backtest
+        backtest = quintile_backtest(df, horizon=holding_period)
+
+        if 'error' in backtest:
+            st.error(backtest['error'])
+            continue
+
+        # Metrics
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric("LN Chiến Lược (Q5-Q1)", f"{backtest['strategy_returns_mean']:.2%}")
+
+        with col2:
+            st.metric("Độ Biến Động", f"{backtest['strategy_returns_std']:.2%}")
+
+        with col3:
+            st.metric("Tỷ Số Sharpe", f"{backtest['sharpe_ratio']:.2f}")
+
+        with col4:
+            st.metric("Kích Thước Mẫu", f"{backtest['sample_size']:,}")
+
+        # Quintile returns chart
+        quintile_returns = backtest['quintile_returns']
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Bar(
+            x=quintile_returns[QUINTILE],
+            y=quintile_returns['mean'],
+            marker_color=QUINTILE_COLORS,
+            text=quintile_returns['mean'].apply(lambda x: f"{x:.2%}"),
+            textposition='outside'
+        ))
+
+        fig.update_layout(
+            title=f"{ticker} - LN Theo Nhóm Điểm Tổng Hợp (Nắm giữ {holding_period} ngày)",
+            xaxis_title="Nhóm",
+            yaxis_title="LN Trung Bình",
+            yaxis_tickformat='.2%',
+            height=400,
+            template='plotly_white'
+        )
+
+        fig.add_hline(y=0, line_dash="dash", line_color="gray")
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Detailed stats
+        st.dataframe(
+            quintile_returns.style.format({
+                'mean': '{:.4f}',
+                'std': '{:.4f}',
+                'count': '{:.0f}'
+            }),
+            use_container_width=True
+        )
+
+        # CAPM analysis
+        if STOCK_RETURN in df.columns and MARKET_RETURN in df.columns:
+            # Get Q5-Q1 returns
+            df_with_quintiles = df.copy()
+            from utils.helpers import create_quintiles
+            df_with_quintiles[QUINTILE] = create_quintiles(df_with_quintiles[COMPOSITE_SCORE])
+
+            fwd_ret_col = f'fwd_return_{holding_period}d'
+            if fwd_ret_col in df_with_quintiles.columns:
+                q5_mask = df_with_quintiles[QUINTILE] == 'Q5'
+                strategy_rets = df_with_quintiles[q5_mask][fwd_ret_col].dropna()
+                market_rets = df_with_quintiles[q5_mask][MARKET_RETURN].shift(-holding_period).dropna()
+
+                # Align
+                common_idx = strategy_rets.index.intersection(market_rets.index)
+                if len(common_idx) > 10:
+                    capm = capm_analysis(strategy_rets[common_idx], market_rets[common_idx])
+
+                    if 'error' not in capm:
+                        st.subheader("Phân Tích CAPM (Q5 vs Thị Trường)")
+
+                        col1, col2, col3 = st.columns(3)
+
+                        with col1:
+                            st.metric("Alpha (hàng năm)", f"{capm[ALPHA]:.2%}")
+
+                        with col2:
+                            st.metric("Beta", f"{capm[BETA]:.2f}")
+
+                        with col3:
+                            st.metric("LN TB (hàng năm)", f"{capm['mean_return']:.2%}")
+
+# Aggregate performance
+st.header("Tóm Tắt Hiệu Suất Tổng Hợp")
+
+st.markdown(f"""
+**Cài Đặt**:
+- Công Thức: Khối Ngoại + Định Giá (backtest 5 năm)
+- Kỳ Hạn Nắm Giữ: {holding_period} ngày
+- Số Mã: {len(selected_tickers)} mã
+- Mã Cổ Phiếu: {', '.join(selected_tickers)}
+""")
+
+agg_data = []
+for ticker in selected_tickers:
+    df = scores_data[ticker]
+    backtest = quintile_backtest(df, horizon=holding_period)
+
+    if 'error' not in backtest:
+        agg_data.append({
+            'Mã': ticker,
+            'LN TB (Q5-Q1)': backtest['strategy_returns_mean'],
+            'Tỷ Số Sharpe': backtest['sharpe_ratio'],
+            'Kích Thước Mẫu': backtest['sample_size']
+        })
+
+if agg_data:
+    agg_df = pd.DataFrame(agg_data)
+
+    st.dataframe(
+        agg_df.style.format({
+            'LN TB (Q5-Q1)': '{:.2%}',
+            'Tỷ Số Sharpe': '{:.2f}',
+            'Kích Thước Mẫu': '{:.0f}'
+        }),
+        use_container_width=True
+    )
+
+    # Average metrics
+    col1, col2 = st.columns(2)
+
+    with col1:
+        avg_return = agg_df['LN TB (Q5-Q1)'].mean()
+        st.metric("LN TB Qua Các Mã", f"{avg_return:.2%}")
+
+    with col2:
+        avg_sharpe = agg_df['Tỷ Số Sharpe'].mean()
+        st.metric("Tỷ Số Sharpe TB", f"{avg_sharpe:.2f}")
+
+# Interpretation
+st.header("Giải Thích")
+
+st.info("""
+**Cách sử dụng chiến lược này**:
+
+1. **Điểm Cao (Q5)**:
+   - Mua ròng mạnh từ Khối Ngoại
+   - Phân vị định giá thấp (rẻ)
+   - → Ứng viên Long
+
+2. **Điểm Thấp (Q1)**:
+   - Dòng tiền khối ngoại yếu/âm
+   - Phân vị định giá cao (đắt)
+   - → Ứng viên Short hoặc tránh
+
+3. **Chỉ Số Hiệu Suất**:
+   - **LN TB Dương**: Chiến lược hoạt động
+   - **Sharpe > 1**: Hiệu suất điều chỉnh rủi ro tốt
+   - **Alpha Dương**: Vượt thị trường sau khi điều chỉnh rủi ro
+
+**Lợi ích**: Backtest 5 năm với 13 mã có độ nhạy cảm khối ngoại cao
+""")
+
+st.warning("""
+⚠️ **Tuyên Bố Miễn Trừ Quan Trọng**:
+
+1. **Hiệu Suất Quá Khứ ≠ Kết Quả Tương Lai**: Các mô hình lịch sử có thể không tiếp tục
+2. **Chi Phí Giao Dịch**: Không bao gồm trong backtest (trượt giá, hoa hồng, tác động)
+3. **Chỉ 13 Mã**: Chỉ áp dụng cho các mã có độ nhạy cảm khối ngoại đáng kể
+4. **Chế Độ Thị Trường**: Kết quả có thể khác nhau ở các điều kiện thị trường khác nhau
+5. **Không Phải Lời Khuyên Đầu Tư**: Đây chỉ là nghiên cứu/giáo dục
+
+**ĐỪNG sử dụng đây làm cơ sở duy nhất cho quyết định đầu tư!**
+""")

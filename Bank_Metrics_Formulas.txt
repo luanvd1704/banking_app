@@ -1,0 +1,347 @@
+================================================================================
+CÔNG THỨC TÍNH 11 CHỈ SỐ TÀI CHÍNH NGÂN HÀNG
+Banking Financial Metrics - Formulas Only
+================================================================================
+
+NGUỒN DỮ LIỆU: vnstock API (VCI source), Quarterly data
+FILE OUTPUT: data/bank_financials.xlsx (17 sheets, mỗi sheet = 1 ngân hàng)
+
+================================================================================
+1. ROA (Return on Assets) - Tỷ Suất Sinh Lời Trên Tài Sản
+================================================================================
+
+Công thức LaTeX:
+$$
+ROA = \frac{\text{Net Profit}}{\text{Total Assets}} \times 4 \times 100
+$$
+
+Công thức Excel:
+= (Net_Profit / Total_Assets) * 4 * 100
+
+Field từ vnstock:
+- Net Profit: "Net Profit For the Year" (Income Statement)
+- Total Assets: "TOTAL ASSETS (Bn. VND)" (Balance Sheet)
+
+Tính chất:
+- Quarterly → Annualized (nhân 4)
+- Đơn vị: % (phần trăm hàng năm)
+- Direction: Higher is better
+
+
+================================================================================
+2. NIM (Net Interest Margin) - Tỷ Suất Lãi Ròng
+================================================================================
+
+Công thức LaTeX:
+$$
+NIM = \frac{\text{Interest Income} + \text{Interest Expense}}{\text{Total Assets}} \times 4 \times 100
+$$
+
+⚠️ LƯU Ý: Interest Expense từ API là SỐ ÂM, nên dùng CỘNG (+)
+
+Công thức Excel:
+= ((Interest_Income + Interest_Expense) / Total_Assets) * 4 * 100
+
+Field từ vnstock:
+- Interest Income: "Interest and Similar Income" (Income Statement)
+- Interest Expense: "Interest and Similar Expenses" (Income Statement - ÂM)
+- Earning Assets: Dùng "TOTAL ASSETS (Bn. VND)" làm proxy
+
+Tính chất:
+- Quarterly → Annualized (nhân 4)
+- Đơn vị: % (phần trăm hàng năm)
+- Direction: Higher is better
+
+
+================================================================================
+3. CREDIT COST (Chi Phí Tín Dụng)
+================================================================================
+
+Công thức LaTeX:
+$$
+\text{Credit Cost} = \frac{|\text{Provision Expense}|}{\text{Total Loans}} \times 4 \times 100
+$$
+
+⚠️ LƯU Ý: Provision Expense từ API là SỐ ÂM → Lấy ABS()
+
+Công thức Excel:
+= (ABS(Provision_Expense) / Total_Loans) * 4 * 100
+
+Field từ vnstock:
+- Provision: "Provision for credit losses" (Income Statement - ÂM)
+- Total Loans: "Loans and advances to customers, net" (Balance Sheet)
+
+Tính chất:
+- Quarterly → Annualized (nhân 4)
+- Đơn vị: % (phần trăm hàng năm)
+- Direction: Lower is better (Càng thấp càng tốt)
+
+
+================================================================================
+4. NET PROFIT YoY (Tăng Trưởng Lợi Nhuận)
+================================================================================
+
+Công thức LaTeX (YoY Growth):
+$$
+\text{Net Profit YoY} = \frac{\text{Net Profit}_{t} - \text{Net Profit}_{t-4}}{\text{Net Profit}_{t-4}} \times 100
+$$
+
+t-4 = Cùng quý năm trước (4 quarters trước)
+
+Công thức Excel:
+= (Net_Profit_Current - Net_Profit_4Q_Ago) / Net_Profit_4Q_Ago * 100
+
+Hoặc dùng pandas:
+net_profit.pct_change(periods=4) * 100
+
+Field từ vnstock:
+- Net Profit: "Net Profit For the Year" (Income Statement)
+
+Tính chất:
+- YoY Growth (So sánh cùng kỳ năm trước)
+- KHÔNG annualize
+- Đơn vị: % (phần trăm)
+- Direction: Higher is better
+- ⚠️ Cần ít nhất 5 quarters để tính (4 quarters lịch sử + 1 hiện tại)
+
+
+================================================================================
+5. LOAN GROWTH YoY (Tăng Trưởng Dư Nợ)
+================================================================================
+
+Công thức LaTeX:
+$$
+\text{Loan Growth YoY} = \frac{\text{Total Loans}_{t} - \text{Total Loans}_{t-4}}{\text{Total Loans}_{t-4}} \times 100
+$$
+
+Công thức Excel:
+= (Total_Loans_Current - Total_Loans_4Q_Ago) / Total_Loans_4Q_Ago * 100
+
+Field từ vnstock:
+- Total Loans: "Loans and advances to customers, net" (Balance Sheet)
+
+Tính chất:
+- YoY Growth
+- KHÔNG annualize
+- Đơn vị: % (phần trăm)
+- Direction: Higher is better
+- ⚠️ Cần ít nhất 5 quarters
+
+
+================================================================================
+6. OPERATING INCOME YoY (Tăng Trưởng Thu Nhập Hoạt Động)
+================================================================================
+
+Công thức LaTeX:
+$$
+\text{Operating Income YoY} = \frac{\text{Operating Income}_{t} - \text{Operating Income}_{t-4}}{\text{Operating Income}_{t-4}} \times 100
+$$
+
+Công thức Excel:
+= (Operating_Income_Current - Operating_Income_4Q_Ago) / Operating_Income_4Q_Ago * 100
+
+Field từ vnstock:
+- Operating Income: "Total operating revenue" (Income Statement)
+
+Tính chất:
+- YoY Growth
+- KHÔNG annualize
+- Đơn vị: % (phần trăm)
+- Direction: Higher is better
+- ⚠️ Cần ít nhất 5 quarters
+
+
+================================================================================
+7. CIR (Cost-to-Income Ratio) - Tỷ Lệ Chi Phí Trên Thu Nhập
+================================================================================
+
+Công thức LaTeX:
+$$
+CIR = \frac{\text{Operating Expense}}{\text{Operating Income}} \times 100
+$$
+
+⚠️ LƯU Ý: Operating Expense có thể là SỐ ÂM → Lấy ABS()
+
+Công thức Excel:
+= (ABS(Operating_Expense) / Operating_Income) * 100
+
+Field từ vnstock:
+- Operating Expense: "General & Admin Expenses" (Income Statement)
+- Operating Income: "Total operating revenue" (Income Statement)
+
+Tính chất:
+- Quarterly ratio (tỷ lệ trong quý)
+- KHÔNG annualize
+- Đơn vị: % (phần trăm)
+- Direction: Lower is better (Càng thấp càng hiệu quả)
+
+
+================================================================================
+8. EQUITY/ASSETS (Tỷ Lệ Vốn Chủ Sở Hữu Trên Tổng Tài Sản)
+================================================================================
+
+Công thức LaTeX:
+$$
+\text{Equity/Assets} = \frac{\text{Equity}}{\text{Total Assets}} \times 100
+$$
+
+Công thức Excel:
+= (Equity / Total_Assets) * 100
+
+Field từ vnstock:
+- Equity: "OWNER'S EQUITY(Bn.VND)" (Balance Sheet)
+- Total Assets: "TOTAL ASSETS (Bn. VND)" (Balance Sheet)
+
+Tính chất:
+- Balance Sheet ratio (snapshot cuối quý)
+- KHÔNG annualize
+- Đơn vị: % (phần trăm)
+- Direction: Optimal Range [7-12%]
+  * < 7%: Đòn bẩy quá cao, rủi ro
+  * 7-12%: Phạm vi tối ưu
+  * > 12%: Bảo thủ, không tận dụng đòn bẩy
+
+
+================================================================================
+9. LDR (Loan-to-Deposit Ratio) - Tỷ Lệ Cho Vay Trên Huy Động
+================================================================================
+
+Công thức LaTeX:
+$$
+LDR = \frac{\text{Total Loans}}{\text{Total Deposits}} \times 100
+$$
+
+Công thức Excel:
+= (Total_Loans / Total_Deposits) * 100
+
+Field từ vnstock:
+- Total Loans: "Loans and advances to customers, net" (Balance Sheet)
+- Deposits: "Deposits from customers" (Balance Sheet)
+
+Tính chất:
+- Balance Sheet ratio (snapshot cuối quý)
+- KHÔNG annualize
+- Đơn vị: % (phần trăm)
+- Direction: Optimal Range [70-85%]
+  * < 70%: Thanh khoản dư thừa, kém hiệu quả
+  * 70-85%: Phạm vi tối ưu
+  * > 85%: Rủi ro thanh khoản cao
+
+
+================================================================================
+10. FEE RATIO (Tỷ Trọng Thu Nhập Phí)
+================================================================================
+
+Công thức LaTeX:
+$$
+\text{Fee Ratio} = \frac{\text{Fee Income}}{\text{Total Operating Income}} \times 100
+$$
+
+Công thức Excel:
+= (Fee_Income / Operating_Income) * 100
+
+Field từ vnstock:
+- Fee Income: "Net Fee and Commission Income" (Income Statement)
+- Operating Income: "Total operating revenue" (Income Statement)
+
+Tính chất:
+- Income Statement ratio (tỷ lệ trong quý)
+- KHÔNG annualize
+- Đơn vị: % (phần trăm)
+- Direction: Higher is better (đa dạng hóa thu nhập)
+
+
+================================================================================
+11. OCF/NET PROFIT (Dòng Tiền Hoạt Động Trên Lợi Nhuận)
+================================================================================
+
+Công thức LaTeX:
+$$
+\text{OCF/Net Profit} = \frac{\text{Operating Cash Flow}}{\text{Net Profit}}
+$$
+
+⚠️ LƯU Ý: Nếu Net Profit = 0 → Thay bằng NaN để tránh division by zero
+
+Công thức Excel:
+= IF(Net_Profit=0, "", Operating_Cash_Flow / Net_Profit)
+
+Field từ vnstock:
+- OCF: "Cash flows from Operating Activities" (Cash Flow Statement)
+- Net Profit: "Net Profit For the Year" (Income Statement)
+
+Tính chất:
+- Quarterly ratio
+- KHÔNG annualize
+- Đơn vị: ratio (tỷ số, KHÔNG nhân 100)
+- Direction: Higher is better
+- Ý nghĩa:
+  * > 1: Lợi nhuận được thu về bằng tiền, chất lượng cao
+  * < 1: Lợi nhuận chưa thu về
+  * Âm: Lỗ dòng tiền
+
+
+================================================================================
+TÓM TẮT - QUICK REFERENCE
+================================================================================
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║ STT │ Metric           │ Formula             │ Annualize? │ Direction   ║
+╠══════════════════════════════════════════════════════════════════════════╣
+║ 1   │ ROA              │ NP/TA × 4 × 100     │ YES (×4)   │ Higher ↑    ║
+║ 2   │ NIM              │ NII/EA × 4 × 100    │ YES (×4)   │ Higher ↑    ║
+║ 3   │ Credit Cost      │ Prov/Loans × 4×100  │ YES (×4)   │ Lower ↓     ║
+║ 4   │ Net Profit YoY   │ pct_change(4)×100   │ NO         │ Higher ↑    ║
+║ 5   │ Loan Growth      │ pct_change(4)×100   │ NO         │ Higher ↑    ║
+║ 6   │ OI YoY           │ pct_change(4)×100   │ NO         │ Higher ↑    ║
+║ 7   │ CIR              │ OpEx/OpInc × 100    │ NO         │ Lower ↓     ║
+║ 8   │ Equity/Assets    │ Eq/TA × 100         │ NO         │ Range 7-12% ║
+║ 9   │ LDR              │ Loans/Dep × 100     │ NO         │ Range 70-85%║
+║ 10  │ Fee Ratio        │ Fee/OpInc × 100     │ NO         │ Higher ↑    ║
+║ 11  │ OCF/Net Profit   │ OCF/NP              │ NO         │ Higher ↑    ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+LƯU Ý:
+- Annualized metrics (1,2,3): Quarterly data nhân 4 để ra % năm
+- YoY metrics (4,5,6): So sánh với cùng quý năm trước (lag 4 quarters)
+- Ratio metrics (7,8,9,10,11): Tỷ lệ tức thời, không annualize
+- Số âm từ API: Interest Expense, Provision, Operating Expense → Lấy ABS() khi cần
+
+================================================================================
+CODE PYTHON THAM KHẢO
+================================================================================
+
+# 1. ROA
+roa = (net_profit / total_assets * 4 * 100).round(2)
+
+# 2. NIM (interest_expense là âm)
+net_interest = interest_income + interest_expense
+nim = (net_interest / total_assets * 4 * 100).round(2)
+
+# 3. Credit Cost (provision là âm)
+provision_abs = provision.abs()
+credit_cost = (provision_abs / total_loans * 4 * 100).round(2)
+
+# 4-6. YoY Growth (cần sort descending trước)
+net_profit_yoy = net_profit.pct_change(periods=4).mul(100).round(2)
+loan_growth = total_loans.pct_change(periods=4).mul(100).round(2)
+operating_income_yoy = operating_income.pct_change(periods=4).mul(100).round(2)
+
+# 7. CIR
+operating_expense_abs = operating_expense.abs()
+cir = (operating_expense_abs / operating_income * 100).round(2)
+
+# 8. Equity/Assets
+equity_assets = (equity / total_assets * 100).round(2)
+
+# 9. LDR
+ldr = (total_loans / deposits * 100).round(2)
+
+# 10. Fee Ratio
+fee_ratio = (fee_income / operating_income * 100).round(2)
+
+# 11. OCF/Net Profit (không nhân 100)
+ocf_net_profit = (ocf / net_profit.replace(0, np.nan)).round(2)
+
+================================================================================
+END
+================================================================================
