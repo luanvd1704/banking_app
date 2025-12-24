@@ -47,7 +47,7 @@ VALUATION_FILE = os.path.join(DATA_DIR, 'bank_valuation.xlsx')
 FINANCIAL_FILE = os.path.join(DATA_DIR, 'bank_financials.xlsx')
 
 # Market index file (shared with steel)
-VNINDEX_FILE = os.path.join(BASE_DIR, 'Stock-analyst', 'vnindex_market.xlsx')
+VNINDEX_FILE = os.path.join(BASE_DIR, 'data-collector', 'vnindex_market.xlsx')
 
 # ============================================
 # STREAMLIT CONFIG

@@ -19,8 +19,8 @@ import datetime
 import time
 from pathlib import Path
 
-# Add Stock-analyst directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'Stock-analyst'))
+# Add data-collector directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'data-collector'))
 
 # Force reload modules to avoid cache issues
 for mod_name in ['fetch_cafef_trade_data', 'fetch_smoney_trade_data']:

@@ -35,7 +35,7 @@ wheels/
 # Streamlit
 .streamlit/secrets.toml
 
-# Data files (Note: Including Stock-analyst data for Streamlit Cloud deployment)
+# Data files (Note: Including data-collector data for Streamlit Cloud deployment)
 # Uncomment lines below if you want to exclude data files:
 # data/raw/**/*.xlsx
 # data/raw/**/*.csv

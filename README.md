@@ -105,10 +105,10 @@ The app will open in your browser at `http://localhost:8501`
 
 ### Updating Data
 
-Use the scripts in the `Stock-analyst/` folder to fetch latest data:
+Use the scripts in the `data-collector/` folder to fetch latest data:
 
 ```bash
-cd Stock-analyst
+cd data-collector
 python export_excel.py
 ```
 
@@ -129,7 +129,7 @@ banking-flow-analysis/
 │   ├── 3_💰_Q4_Valuation.py
 │   ├── 4_🎯_Q5_Composite.py
 │   └── 5_🏆_Ranking.py
-├── Stock-analyst/              # Data fetching and Excel export
+├── data-collector/             # Data fetching and Excel export
 │   ├── export_excel.py
 │   ├── fetch_cafef_trade_data.py
 │   ├── fetch_smoney_trade_data.py
@@ -165,7 +165,7 @@ This app is designed to be deployed on Streamlit Cloud:
 
 Data is automatically updated when you run:
 ```bash
-python Stock-analyst/export_excel.py
+python data-collector/export_excel.py
 ```
 
 Commit and push the updated Excel files to trigger redeployment.

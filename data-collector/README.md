@@ -47,7 +47,7 @@ python -X utf8 -m streamlit run app.py
 ## 📁 Cấu trúc file
 
 ```
-Stock-analyst/
+data-collector/
 ├── app.py                          # Ứng dụng Streamlit chính
 ├── fetch_cafef_trade_data.py       # Module fetch dữ liệu CaféF
 ├── requirements.txt                # Dependencies

@@ -1,7 +1,7 @@
 """Test the fixed CaféF API parsing"""
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'Stock-analyst'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'data-collector'))
 
 from fetch_cafef_trade_data import fetch_cafef_foreign_trades
 
