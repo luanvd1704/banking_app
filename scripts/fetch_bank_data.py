@@ -36,9 +36,13 @@ BANK_TICKERS = [
     "TPB", "VIB", "SSB", "SHB", "MSB", "LPB", "OCB", "EIB"
 ]
 
-# Output files
-OUTPUT_FOREIGN = "data/bank_foreign_trading.xlsx"
-OUTPUT_VALUATION = "data/bank_valuation.xlsx"
+# Output files - Use absolute paths for reliability
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+
+OUTPUT_FOREIGN = os.path.join(DATA_DIR, "bank_foreign_trading.xlsx")
+OUTPUT_VALUATION = os.path.join(DATA_DIR, "bank_valuation.xlsx")
 
 # Date range for CaféF (5 years)
 end_date = datetime.datetime.now()
@@ -51,7 +55,7 @@ TICKER_DELAY = 2.0
 SOURCE_DELAY = 1.0
 
 # Error logging
-ERROR_LOG_FILE = "data/fetch_bank_data_errors.log"
+ERROR_LOG_FILE = os.path.join(DATA_DIR, "fetch_bank_data_errors.log")
 
 # Ticker groups to avoid timeout
 TICKER_GROUPS = [
@@ -291,7 +295,7 @@ Examples:
     start_time = datetime.datetime.now()
 
     # Setup
-    os.makedirs("data", exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
     if os.path.exists(ERROR_LOG_FILE):
         os.remove(ERROR_LOG_FILE)
 

@@ -48,9 +48,13 @@ VALUATION_TICKERS = [
     "TPB", "VIB", "SSB", "SHB", "MSB", "LPB", "OCB", "EIB"
 ]  # All 17 banks
 
-# Output files
-OUTPUT_FOREIGN = "data/bank_foreign_trading.xlsx"
-OUTPUT_VALUATION = "data/bank_valuation.xlsx"
+# Output files - Use absolute paths for reliability
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+
+OUTPUT_FOREIGN = os.path.join(DATA_DIR, "bank_foreign_trading.xlsx")
+OUTPUT_VALUATION = os.path.join(DATA_DIR, "bank_valuation.xlsx")
 # NOTE: bank_self_trading.xlsx will NOT be updated
 
 # Date range for CaféF (5 years)
@@ -64,7 +68,7 @@ TICKER_DELAY = 2.0
 SOURCE_DELAY = 1.0
 
 # Error logging
-ERROR_LOG_FILE = "data/fetch_selective_errors.log"
+ERROR_LOG_FILE = os.path.join(DATA_DIR, "fetch_selective_errors.log")
 
 def log_error(ticker, source, error_msg, tb_str):
     """Log error to file"""
@@ -87,7 +91,7 @@ def main():
     print("=" * 60)
 
     start_time = datetime.datetime.now()
-    os.makedirs("data", exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
 
     # Clear error log
     if os.path.exists(ERROR_LOG_FILE):
