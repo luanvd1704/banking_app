@@ -12,8 +12,11 @@ import sys
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from config.config import SIGNIFICANCE_LEVEL, MIN_SAMPLE_SIZE
-from utils.constants import *
+import config
+from helpers import *
+
+SIGNIFICANCE_LEVEL = config.SIGNIFICANCE_LEVEL
+MIN_SAMPLE_SIZE = config.MIN_SAMPLE_SIZE
 
 
 def ttest_two_groups(group1: pd.Series, group2: pd.Series,

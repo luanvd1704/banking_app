@@ -8,20 +8,10 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from data.loader import merge_all_data
-from analysis.valuation import (
-    calculate_valuation_percentiles, analyze_percentile_returns,
-    valuation_summary, compare_valuation_metrics, predict_forward_return,
-    identify_valuation_zones
-)
-from visualization.charts_q4 import (
-    create_percentile_timeseries, create_decile_returns_chart,
-    create_valuation_gauge, create_zone_comparison_chart
-)
-from config import config_banking
-from config.config import CACHE_TTL
-from utils.constants import *
-from utils.logo_helper import display_sidebar_logo
+import config
+from helpers import *
+from analysis.analysis import analyze_valuation_percentiles, create_deciles_by_valuation, calculate_valuation_percentiles
+from charts import create_percentile_timeseries, create_decile_returns_chart, create_valuation_gauge, create_zone_comparison_chart
 
 # All 17 banking tickers (Valuation analysis doesn't require foreign trading data)
 BANKING_TICKERS = [
@@ -44,16 +34,17 @@ Phân tích này xem xét liệu mua cổ phiếu khi chúng rẻ về mặt l�
 """)
 
 # Load data
-@st.cache_data(ttl=CACHE_TTL)
+@st.cache_data(ttl=config.CACHE_TTL)
 def load_all_data():
-    return merge_all_data(config_banking)
+    return merge_all_data(config.FOREIGN_TRADING_FILE, config.VALUATION_FILE,
+                          config.VNINDEX_FILE, BANKING_TICKERS, config.MA_WINDOW_REGIME)
 
-@st.cache_data(ttl=CACHE_TTL)
+@st.cache_data(ttl=config.CACHE_TTL)
 def prepare_valuation_data(ticker):
     data = load_all_data()
     df = data[ticker].copy()
     df = calculate_valuation_percentiles(df)
-    df = identify_valuation_zones(df)
+    # df = identify_valuation_zones(df)  # TODO: Function not implemented
     return df
 
 # Sidebar
@@ -268,7 +259,7 @@ st.markdown("""
 Biểu đồ dưới đây hiển thị PE và PB hiện tại của tất cả 17 ngân hàng, sắp xếp theo thứ tự giảm dần.
 """)
 
-@st.cache_data(ttl=CACHE_TTL)
+@st.cache_data(ttl=config.CACHE_TTL)
 def get_all_banks_current_valuation():
     """Get current PE and PB for all banks"""
     data = load_all_data()

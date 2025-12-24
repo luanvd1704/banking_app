@@ -1,6 +1,6 @@
 """
-Banking Sector Configuration
-Contains banking-specific tickers, file paths, and 11 financial metrics metadata
+Banking Sector Analysis - Configuration
+All configuration parameters for the banking flow analysis platform
 """
 import os
 
@@ -36,39 +36,90 @@ TICKERS = [
 # ============================================
 # FILE PATHS
 # ============================================
-# Base directory (root of steel-flow-analysis)
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-DATA_DIR = os.path.join(BASE_DIR, 'data')
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DATA_DIR = os.path.join(BASE_DIR, 'data-collector')
 
 # Data files
 FOREIGN_TRADING_FILE = os.path.join(DATA_DIR, 'bank_foreign_trading.xlsx')
-SELF_TRADING_FILE = os.path.join(DATA_DIR, 'bank_self_trading.xlsx')
 VALUATION_FILE = os.path.join(DATA_DIR, 'bank_valuation.xlsx')
 FINANCIAL_FILE = os.path.join(DATA_DIR, 'bank_financials.xlsx')
-
-# Market index file (shared with steel)
-VNINDEX_FILE = os.path.join(BASE_DIR, 'data-collector', 'vnindex_market.xlsx')
+VNINDEX_FILE = os.path.join(DATA_DIR, 'vnindex_market.xlsx')
 
 # ============================================
 # STREAMLIT CONFIG
 # ============================================
 PAGE_TITLE = "Banking Sector Analysis"
 PAGE_ICON = "🏦"
+LAYOUT = "wide"
+CACHE_TTL = 3600  # 1 hour
 
 # ============================================
 # SECTOR-SPECIFIC PARAMETERS
 # ============================================
-# Banking sector uses financial metrics ranking
 HAS_FINANCIAL_METRICS = True
 HAS_RANKING_PAGE = True
 
 # ============================================
-# BANKING FINANCIAL METRICS (8 metrics)
+# ANALYSIS PARAMETERS
 # ============================================
-# REMOVED: NIM, Credit Cost, LDR (require detailed notes from financial statements)
-# WEIGHT 1.0 (Normal): ROA, Net Profit YoY, Operating Income YoY, CIR, Equity/Assets, Fee Ratio
-# WEIGHT 0.5 (Medium): Loan Growth (high noise)
-# WEIGHT 0.25 (Warning flag): OCF/Net Profit (very high noise in banking CFO)
+# Event windows for analysis
+EVENT_WINDOWS = [(1, 5), (1, 10)]
+
+# Forward return horizons (in trading days)
+FORWARD_RETURN_HORIZONS = [1, 3, 5, 10, 20, 30]
+
+# Rolling window parameters
+ADV_WINDOW = 20              # Average daily volume window
+ZSCORE_WINDOW = 252          # Z-score window (1 year trading days)
+PERCENTILE_WINDOW = 756      # Percentile window (3 years trading days)
+
+# Statistical parameters
+SIGNIFICANCE_LEVEL = 0.05    # Alpha for hypothesis testing
+MIN_SAMPLE_SIZE = 30         # Minimum sample size for t-tests
+
+# Market regime parameters
+MA_WINDOW_REGIME = 200       # Moving average for bull/bear classification
+
+# Backtest parameters
+REBALANCE_FREQ = 'M'         # Monthly rebalancing
+MIN_HOLDING_PERIOD = 1       # Minimum holding period in days
+
+# Normalization methods
+NORMALIZATION_METHODS = ['ADV20', 'GTGD']
+
+# ============================================
+# VISUALIZATION PARAMETERS
+# ============================================
+# Color schemes
+COLOR_PALETTE = {
+    'primary': '#1f77b4',
+    'secondary': '#ff7f0e',
+    'success': '#2ca02c',
+    'danger': '#d62728',
+    'warning': '#ff9800',
+    'info': '#17a2b8',
+    'neutral': '#7f7f7f'
+}
+
+# Quintile colors (for Q1, Q5 analysis)
+QUINTILE_COLORS = ['#d62728', '#ff7f0e', '#7f7f7f', '#2ca02c', '#1f77b4']
+
+# Tercile labels
+TERCILE_LABELS = ['T1', 'T2', 'T3']
+
+# Chart defaults
+CHART_HEIGHT = 500
+CHART_WIDTH = 800
+
+# ============================================
+# DATA QUALITY PARAMETERS
+# ============================================
+MAX_MISSING_PCT = 0.5  # 50%
+MIN_DATA_POINTS = 100
+
+# ============================================
+# BANKING FINANCIAL METRICS (9 metrics)
+# ============================================
 BANK_METRICS = {
     'roa': {
         'name': 'ROA',
@@ -180,18 +231,28 @@ DEFAULT_RANKING_METRIC = 'roa'
 # WARNINGS AND DISCLAIMERS
 # ============================================
 SECTOR_WARNING = """
-⚠️ **Lưu ý về dữ liệu Banking - 8 Metrics với TTM + YTD Methodology**:
+⚠️ **Lưu ý về dữ liệu Banking - 9 Metrics với TTM + YTD Methodology**:
 - **TTM (Trailing Twelve Months)**: ROA, CIR, Fee Ratio, OCF/Net Profit
   → Tổng 4 quý gần nhất, phản ánh performance thực tế 12 tháng
 - **9M YTD (Year-to-Date)**: Net Profit YoY, Operating Income YoY
   → So sánh 9 tháng năm nay vs 9 tháng năm trước, ổn định hơn quarterly YoY
-- **End-Quarter**: Loan Growth, Equity/Assets
+- **End-Quarter**: Loan Growth, Equity/Assets, LDR
   → Snapshot cuối quý, balance sheet metrics
-- **Đã loại bỏ**: NIM, Credit Cost, LDR (cần dữ liệu thuyết minh BCTC)
 - **Trọng số phân tầng**:
   - **1.0 (Bình thường)**: ROA, Net Profit YoY, Operating Income YoY, CIR, Equity/Assets, Fee Ratio
   - **0.5 (Tham khảo)**: Loan Growth (độ nhiễu cao)
   - **0.25 (Cờ cảnh báo)**: OCF/Net Profit (CFO ngân hàng rất nhiễu, chỉ dùng để cảnh báo)
+  - **0.10 (Theo dõi)**: LDR (liquidity monitoring)
 - Dữ liệu BCTC quarterly được forward-fill sang daily cho ranking
 - Cần ít nhất 4-5 quarters dữ liệu lịch sử để tính TTM và YTD chính xác
+"""
+
+BACKTEST_DISCLAIMER = """
+⚠️ **Disclaimer**: Kết quả backtest là phân tích lịch sử và không đảm bảo hiệu suất tương lai.
+Không nên sử dụng làm khuyến nghị đầu tư.
+"""
+
+DATA_LIMITATION_WARNING = """
+⚠️ **Giới hạn dữ liệu**: Một số thời kỳ có thể thiếu dữ liệu giao dịch.
+Các giá trị bị thiếu được forward-fill cho giá, nhưng dữ liệu giao dịch giữ nguyên NaN.
 """

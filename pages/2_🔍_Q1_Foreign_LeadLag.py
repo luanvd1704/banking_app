@@ -11,11 +11,11 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from data.loader import merge_all_data
-from analysis.lead_lag import lead_lag_analysis_full, find_optimal_normalization_window
-from config.config import get_sector_config, FORWARD_RETURN_HORIZONS, CACHE_TTL, QUINTILE_COLORS
-from utils.constants import *
-from utils.logo_helper import display_sidebar_logo
+import config
+from config import FORWARD_RETURN_HORIZONS, CACHE_TTL, QUINTILE_COLORS
+from helpers import *
+from analysis.analysis import analyze_foreign_lead_lag, prepare_lead_lag_data
+from charts import create_quintile_returns_chart, create_foreign_flow_timeseries
 
 # Filtered bank tickers based on comprehensive quintile analysis across 6 timeframes
 # Only banks with statistical significance (p-value <= 0.05, positive spread)
@@ -29,9 +29,6 @@ FILTERED_BANKING_TICKERS = [
     'SSB',  # 2/6 horizons - MARGINAL (p_min=0.0300, spread_max=1.53%)
     'EIB',  # 1/6 horizon - MODERATE (p_min=0.0155, spread_max=1.54%)
 ]
-
-# Get banking config
-config_banking = get_sector_config('banking')
 
 st.set_page_config(page_title="Q1: Dẫn/Trễ NDTNN", page_icon="🔍", layout="wide")
 
@@ -68,9 +65,10 @@ Phân tích này xem xét liệu mua ròng của nhà đầu tư nước ngoài 
 """)
 
 # Load data
-@st.cache_data(ttl=CACHE_TTL)
+@st.cache_data(ttl=config.CACHE_TTL)
 def load_all_data():
-    return merge_all_data(config_banking, tickers=FILTERED_BANKING_TICKERS)
+    return merge_all_data(config.FOREIGN_TRADING_FILE, config.VALUATION_FILE,
+                          config.VNINDEX_FILE, FILTERED_BANKING_TICKERS, config.MA_WINDOW_REGIME)
 
 with st.spinner("Đang tải dữ liệu..."):
     data = load_all_data()

@@ -12,11 +12,10 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from data.loader import merge_all_data, get_data_summary
-from config import config_banking
-from config.config import CACHE_TTL
-from utils.constants import *
-from utils.logo_helper import display_sidebar_logo
+import config
+from helpers import *
+
+TICKERS = config.TICKERS
 
 st.set_page_config(page_title="Tổng Quan", page_icon="📊", layout="wide")
 
@@ -26,11 +25,12 @@ display_sidebar_logo()
 st.title("📊 Tổng Quan Dữ Liệu")
 
 # Load data with caching
-@st.cache_data(ttl=CACHE_TTL)
+@st.cache_data(ttl=config.CACHE_TTL)
 def load_all_data():
-    return merge_all_data(config_banking)
+    return merge_all_data(config.FOREIGN_TRADING_FILE, config.VALUATION_FILE,
+                          config.VNINDEX_FILE, config.TICKERS, config.MA_WINDOW_REGIME)
 
-@st.cache_data(ttl=CACHE_TTL)
+@st.cache_data(ttl=config.CACHE_TTL)
 def get_summary(data):
     return get_data_summary(data)
 
@@ -105,7 +105,6 @@ for ticker, df in data.items():
     missing_row = {
         'Mã': ticker,
         'Mua Ròng NN': f"{(df[FOREIGN_NET_BUY_VAL].isna().sum() / len(df) * 100):.1f}%",
-        'Mua Ròng Tự Doanh': f"{(df[SELF_NET_BUY_VAL].isna().sum() / len(df) * 100):.1f}%" if SELF_NET_BUY_VAL in df.columns else "N/A",
         'PE': f"{(df[PE].isna().sum() / len(df) * 100):.1f}%" if PE in df.columns else "N/A",
         'PB': f"{(df[PB].isna().sum() / len(df) * 100):.1f}%" if PB in df.columns else "N/A",
         'Giá Đóng Cửa': f"{(df[CLOSE].isna().sum() / len(df) * 100):.1f}%"
@@ -127,8 +126,6 @@ if selected_ticker in data:
 
     # Select columns to display
     display_cols = [DATE, CLOSE, FOREIGN_NET_BUY_VAL, MARKET_RETURN]
-    if SELF_NET_BUY_VAL in ticker_df.columns:
-        display_cols.insert(3, SELF_NET_BUY_VAL)
     if PE in ticker_df.columns:
         display_cols.append(PE)
     if PB in ticker_df.columns:

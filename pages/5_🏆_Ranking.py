@@ -12,8 +12,8 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from config import config_banking
-from utils.logo_helper import display_sidebar_logo
+import config
+from helpers import display_sidebar_logo
 
 st.set_page_config(page_title="Ranking", page_icon="🏆", layout="wide")
 
@@ -26,9 +26,9 @@ display_sidebar_logo()
 
 @st.cache_data
 def load_banking_metrics():
-    """Load banking_metrics.csv"""
-    csv_path = os.path.join(os.path.dirname(__file__), '..', 'banking_metrics.csv')
-    df = pd.read_csv(csv_path)
+    """Load banking_metrics.xlsx"""
+    xlsx_path = os.path.join(os.path.dirname(__file__), '..', 'banking_metrics.xlsx')
+    df = pd.read_excel(xlsx_path)
     return df
 
 # ==============================================================================

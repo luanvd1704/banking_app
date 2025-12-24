@@ -10,11 +10,10 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from data.loader import merge_all_data
-from analysis.composite import build_composite_score, quintile_backtest, capm_analysis
-from config.config import get_sector_config, CACHE_TTL, QUINTILE_COLORS
-from utils.constants import *
-from utils.logo_helper import display_sidebar_logo
+import config
+from helpers import *
+from analysis.analysis import build_composite_score, quintile_backtest, capm_analysis
+from charts import create_composite_backtest_chart
 
 # Filtered bank tickers based on comprehensive quintile analysis across 6 timeframes
 # Only banks with statistical significance (p-value <= 0.05, positive spread)
@@ -26,9 +25,6 @@ FILTERED_BANKING_TICKERS = [
     'OCB',  # Significant at T+30 (p=0.005, spread=0.023)
     'VPB',  # Significant at T+20 (p=0.003) and T+30 (p=0.004)
 ]
-
-# Get banking config
-config_banking = get_sector_config('banking')
 
 st.set_page_config(page_title="Q5: Điểm Tổng Hợp", page_icon="🎯", layout="wide")
 
@@ -73,9 +69,10 @@ Trong đó:
 """)
 
 # Load data
-@st.cache_data(ttl=CACHE_TTL)
+@st.cache_data(ttl=config.CACHE_TTL)
 def load_all_data():
-    return merge_all_data(config_banking, tickers=FILTERED_BANKING_TICKERS)
+    return merge_all_data(config.FOREIGN_TRADING_FILE, config.VALUATION_FILE,
+                          config.VNINDEX_FILE, FILTERED_BANKING_TICKERS, config.MA_WINDOW_REGIME)
 
 # Sidebar
 st.sidebar.header("Cài Đặt")
@@ -98,8 +95,8 @@ with st.spinner("Đang xây dựng điểm tổng hợp..."):
     scores_data = {}
     for ticker in selected_tickers:
         df = data[ticker].copy()
-        # Use foreign trading + valuation only (no self-trading)
-        df = build_composite_score(df, use_self_trading=False)
+        # Use foreign trading + valuation only
+        df = build_composite_score(df)
         scores_data[ticker] = df
 
 # Current rankings
@@ -176,7 +173,7 @@ for ticker in selected_tickers:
         fig.add_trace(go.Bar(
             x=quintile_returns[QUINTILE],
             y=quintile_returns['mean'],
-            marker_color=QUINTILE_COLORS,
+            marker_color=config.QUINTILE_COLORS,
             text=quintile_returns['mean'].apply(lambda x: f"{x:.2%}"),
             textposition='outside'
         ))
@@ -208,7 +205,7 @@ for ticker in selected_tickers:
         if STOCK_RETURN in df.columns and MARKET_RETURN in df.columns:
             # Get Q5-Q1 returns
             df_with_quintiles = df.copy()
-            from utils.helpers import create_quintiles
+            # create_quintiles is already imported from helpers via *
             df_with_quintiles[QUINTILE] = create_quintiles(df_with_quintiles[COMPOSITE_SCORE])
 
             fwd_ret_col = f'fwd_return_{holding_period}d'

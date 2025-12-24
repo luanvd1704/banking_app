@@ -9,8 +9,7 @@ import os
 # Add current directory to path
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from config.config_banking import PAGE_TITLE, PAGE_ICON
-from config.config import LAYOUT
+from config import PAGE_TITLE, PAGE_ICON, LAYOUT
 
 st.set_page_config(
     page_title=PAGE_TITLE,
